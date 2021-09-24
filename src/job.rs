@@ -29,7 +29,7 @@ where
     let message_id = std::env::var("BARBEQUE_MESSAGE_ID").map_err(|_| Error::NotFound)?;
     let job = std::env::var("BARBEQUE_JOB").map_err(|_| Error::NotFound)?;
     let barbeque_message = std::env::var("BARBEQUE_MESSAGE").map_err(|_| Error::NotFound)?;
-    let message = serde_json::from_str(&barbeque_message).map_err(|e| Error::Serde(e))?;
+    let message = serde_json::from_str(&barbeque_message).map_err(Error::Serde)?;
 
     Ok(Job {
         message_id,
