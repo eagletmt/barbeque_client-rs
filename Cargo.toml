@@ -7,14 +7,14 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hyper = { version = "0.13" }
-reqwest = { version = "0.10", default-features = false, features = ["rustls-tls", "json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-url = "2.1"
+hyper = "0.14"
+reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+url = "2"
 
-bytes = { version = "0.5", optional = true }
-tokio = { version = "0.2", features = ["signal"], optional = true }
+bytes = { version = "1", optional = true }
+tokio = { version = "1", features = ["signal"], optional = true }
 uuid = { version = "0.8", features = ["v4"], optional = true }
 
 [features]
@@ -22,7 +22,7 @@ default = []
 mock_server = ["bytes", "tokio", "uuid"]
 
 [dev-dependencies]
-tokio = { version = "0.2", features = ["macros"] }
+tokio = { version = "1", features = ["macros"] }
 
 [[example]]
 name = "enqueue"
