@@ -2,20 +2,20 @@
 name = "barbeque_client"
 version = "0.1.0"
 authors = ["Kohei Suzuki <eagletmt@gmail.com>"]
-edition = "2018"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-hyper = "0.14"
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls", "json"] }
+hyper = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 url = "2"
 
 bytes = { version = "1", optional = true }
 tokio = { version = "1", features = ["signal"], optional = true }
-uuid = { version = "0.8", features = ["v4"], optional = true }
+uuid = { version = "1", features = ["v4"], optional = true }
 
 [features]
 default = []
