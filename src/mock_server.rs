@@ -1,4 +1,7 @@
-pub async fn start(addr: std::net::SocketAddr, command: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn start(
+    addr: std::net::SocketAddr,
+    command: Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(addr).await?;
     loop {
         tokio::select! {
@@ -44,7 +47,7 @@ async fn handle(
             let message_id = uuid::Uuid::new_v4().hyphenated().to_string();
 
             let mut it = command.into_iter();
-            let mut cmd = std::process::Command::new(it.next().unwrap());
+            let mut cmd = tokio::process::Command::new(it.next().unwrap());
             cmd.args(it)
                 .env("BARBEQUE_MESSAGE_ID", &message_id)
                 .env("BARBEQUE_JOB", params.job)
@@ -52,12 +55,15 @@ async fn handle(
                     "BARBEQUE_MESSAGE",
                     serde_json::to_string(&params.message).unwrap(),
                 );
-            cmd.spawn().expect("Failed to execute command");
+            let mut child = cmd.spawn().expect("Failed to execute command");
+            tokio::spawn(async move { child.wait().await });
 
             let body =
                 serde_json::to_vec(&crate::client::CreateJobExecutionResponse { message_id })
                     .unwrap();
-            Ok(hyper::Response::new(http_body_util::Full::new(bytes::Bytes::from(body))))
+            Ok(hyper::Response::new(http_body_util::Full::new(
+                bytes::Bytes::from(body),
+            )))
         }
         _ => Ok(hyper::Response::builder()
             .status(hyper::StatusCode::NOT_FOUND)
