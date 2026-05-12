@@ -14,21 +14,24 @@ serde_json = "1"
 url = "2"
 
 bytes = { version = "1", optional = true }
-tokio = { version = "1", features = ["signal"], optional = true }
+tokio = { version = "1", features = ["macros", "net", "rt-multi-thread", "signal"], optional = true }
 uuid = { version = "1", features = ["v4"], optional = true }
+hyper-util = { version = "0.1", features = ["tokio", "server-auto", "http1"], optional = true }
+http-body-util = { version = "0.1", optional = true }
 
 [features]
 default = []
-mock_server = ["bytes", "tokio", "uuid"]
+mock_server = ["bytes", "tokio", "uuid", "dep:hyper-util", "dep:http-body-util"]
 
 [dev-dependencies]
-tokio = { version = "1", features = ["macros"] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [[example]]
 name = "enqueue"
 
 [[example]]
 name = "mock_server"
+required-features = ["mock_server"]
 
 [[example]]
 name = "job"

@@ -1,17 +1,29 @@
-pub async fn start(addr: std::net::SocketAddr, command: Vec<String>) -> Result<(), hyper::Error> {
-    let make_service = hyper::service::make_service_fn(|_| {
-        let command = command.clone();
-        async move {
-            Ok::<_, std::convert::Infallible>(hyper::service::service_fn(move |request| {
+pub async fn start(addr: std::net::SocketAddr, command: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+    loop {
+        tokio::select! {
+            accept = listener.accept() => {
+                let (stream, _) = accept?;
                 let command = command.clone();
-                async move { handle(request, command).await }
-            }))
+                let io = hyper_util::rt::TokioIo::new(stream);
+                tokio::spawn(async move {
+                    let _ = hyper_util::server::conn::auto::Builder::new(hyper_util::rt::TokioExecutor::new())
+                        .serve_connection(
+                            io,
+                            hyper::service::service_fn(move |request| {
+                                let command = command.clone();
+                                async move { handle(request, command).await }
+                            }),
+                        )
+                        .await;
+                });
+            }
+            _ = ctrl_c() => {
+                break;
+            }
         }
-    });
-    let server = hyper::Server::bind(&addr)
-        .serve(make_service)
-        .with_graceful_shutdown(ctrl_c());
-    server.await
+    }
+    Ok(())
 }
 
 async fn ctrl_c() {
@@ -19,21 +31,17 @@ async fn ctrl_c() {
 }
 
 async fn handle(
-    request: hyper::Request<hyper::Body>,
+    request: hyper::Request<hyper::body::Incoming>,
     command: Vec<String>,
-) -> Result<hyper::Response<hyper::Body>, hyper::Error> {
+) -> Result<hyper::Response<http_body_util::Full<bytes::Bytes>>, hyper::Error> {
     match (request.method(), request.uri().path()) {
         (&hyper::Method::POST, "/v2/job_executions") => {
-            let buffer = hyper::body::aggregate(request.into_body()).await?;
-            use bytes::Buf;
+            use http_body_util::BodyExt;
+            let body = request.into_body().collect().await?.to_bytes();
             let params: crate::client::CreateJobExecutionRequest<serde_json::Value> =
-                serde_json::from_slice(buffer.bytes()).expect("Failed to parse request body");
+                serde_json::from_slice(&body).expect("Failed to parse request body");
 
-            let mut message_id = vec![0; uuid::adapter::Hyphenated::LENGTH];
-            uuid::Uuid::new_v4()
-                .to_hyphenated()
-                .encode_lower(&mut message_id);
-            let message_id = String::from_utf8(message_id).unwrap();
+            let message_id = uuid::Uuid::new_v4().hyphenated().to_string();
 
             let mut it = command.into_iter();
             let mut cmd = std::process::Command::new(it.next().unwrap());
@@ -49,11 +57,11 @@ async fn handle(
             let body =
                 serde_json::to_vec(&crate::client::CreateJobExecutionResponse { message_id })
                     .unwrap();
-            Ok(hyper::Response::new(hyper::Body::from(body)))
+            Ok(hyper::Response::new(http_body_util::Full::new(bytes::Bytes::from(body))))
         }
         _ => Ok(hyper::Response::builder()
             .status(hyper::StatusCode::NOT_FOUND)
-            .body(hyper::Body::empty())
+            .body(http_body_util::Full::new(bytes::Bytes::new()))
             .unwrap()),
     }
 }
